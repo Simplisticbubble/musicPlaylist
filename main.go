@@ -9,7 +9,27 @@ import (
 	"github.com/kkdai/youtube/v2"
 )
 
+const downloadsFolder = "downloads"
+
+func createDownloadsFolder() error {
+	if _, err := os.Stat(downloadsFolder); os.IsNotExist(err) {
+		err := os.Mkdir(downloadsFolder, 0755)
+		if err != nil {
+			return fmt.Errorf("failed to create downloads folder: %v", err)
+		}
+		fmt.Println("Downloads folder created.")
+	} else if err != nil {
+		return fmt.Errorf("error checking downloads folder: %v", err)
+	}
+	return nil
+}
+
 func downloadYouTubeVideoAsAudio(url string) error {
+	// Create downloads folder if it doesn't exist
+	if err := createDownloadsFolder(); err != nil {
+		return err
+	}
+
 	// Extract video ID from the URL
 	videoID := url[32:]
 	fmt.Printf("Extracted video ID: %s\n", videoID)
@@ -35,8 +55,9 @@ func downloadYouTubeVideoAsAudio(url string) error {
 	}
 	defer stream.Close()
 
-	// Create the output file
-	file, err := os.Create(filepath.Base(videoID) + ".mp3")
+	// Create the output file path
+	outputPath := filepath.Join(downloadsFolder, videoID+".mp3")
+	file, err := os.Create(outputPath)
 	if err != nil {
 		fmt.Printf("Error creating output file: %v\n", err)
 		return err
@@ -50,15 +71,39 @@ func downloadYouTubeVideoAsAudio(url string) error {
 		return err
 	}
 
-	fmt.Println("Download completed successfully!")
+	fmt.Printf("Download completed successfully! Saved to: %s\n", outputPath)
 	return nil
 }
 
+func getPlaylistURLs(playlistID string) ([]string, error) {
+	client := youtube.Client{}
+	playlist, err := client.GetPlaylist(playlistID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get playlist: %v", err)
+	}
+
+	var urls []string
+	for _, entry := range playlist.Videos {
+		urls = append(urls, fmt.Sprintf("https://www.youtube.com/watch?v=%s", entry.ID))
+	}
+
+	return urls, nil
+}
+
 func main() {
-	url := "https://www.youtube.com/watch?v=RkQNm99y8fg"
-	err := downloadYouTubeVideoAsAudio(url)
+	playlistID := "PL9_XszuQGuzgP4-gL0uFCaRr0tFEub7M_"
+	urls, err := getPlaylistURLs(playlistID)
 	if err != nil {
 		fmt.Println(err)
-		return
+
 	}
+	fmt.Printf("Found %d video URLs:\n", len(urls))
+	for _, url := range urls {
+		err := downloadYouTubeVideoAsAudio(url)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}
+
 }
