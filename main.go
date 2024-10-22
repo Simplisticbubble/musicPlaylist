@@ -5,6 +5,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
+	"unicode"
 
 	"github.com/kkdai/youtube/v2"
 )
@@ -56,7 +58,8 @@ func downloadYouTubeVideoAsAudio(url string) error {
 	defer stream.Close()
 
 	// Create the output file path
-	outputPath := filepath.Join(downloadsFolder, videoID+".mp3")
+	var vidTitle = keepLettersAndReplaceSpaces(video.Title)
+	outputPath := filepath.Join(downloadsFolder, vidTitle+".mp3")
 	file, err := os.Create(outputPath)
 	if err != nil {
 		fmt.Printf("Error creating output file: %v\n", err)
@@ -73,6 +76,17 @@ func downloadYouTubeVideoAsAudio(url string) error {
 
 	fmt.Printf("Download completed successfully! Saved to: %s\n", outputPath)
 	return nil
+}
+func keepLettersAndReplaceSpaces(input string) string {
+	var builder strings.Builder
+	for _, char := range input {
+		if unicode.IsLetter(char) {
+			builder.WriteRune(char)
+		} else if char == ' ' {
+			builder.WriteRune('-')
+		}
+	}
+	return builder.String()
 }
 
 func getPlaylistURLs(playlistID string) ([]string, error) {
@@ -91,7 +105,7 @@ func getPlaylistURLs(playlistID string) ([]string, error) {
 }
 
 func main() {
-	playlistID := "PL9_XszuQGuzgP4-gL0uFCaRr0tFEub7M_"
+	playlistID := "PL9_XszuQGuzhuuums8Bkc0dj_FRLo9puN"
 	urls, err := getPlaylistURLs(playlistID)
 	if err != nil {
 		fmt.Println(err)
